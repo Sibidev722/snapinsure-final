@@ -1,55 +1,83 @@
-<div align="center">
+# 🛡️ SnapInsure: The Zero-Claim Platform for Gig Workers
 
-# 🚀 SnapInsure
-**Instant Income Protection for Gig Workers — Powered by AI & Live Risk Graphs**
+**Instant Income Protection Powered by AI Risk Graphs & Real-Time Disruption Monitoring.**
 
-[![Deployed on Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fkamalesh2602%2FGuidewire)
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/kamalesh2602/Guidewire)
-
-</div>
-
-## 🎯 The Pitch
-SnapInsure is a zero-claim, AI-powered parametric insurance system that uses a live graph neural network to detect disruptions and automatically compensate gig workers in real time. We protect income, not just assets.
-
-## 🌟 Demo Credentials
-Access the live platform using the following verified worker profiles:
-
-| Phone Number | Platform | City | Role |
-|--------------|----------|------|------|
-| **`9876543210`** | Swiggy | Chennai | Primary Demo Account |
-| **`9876543211`** | Zomato | Bangalore | Fallback Account |
-| **`9876543212`** | Zepto | Hyderabad | Testing Account |
-
-> **Note:** Demo mode is active. Entering a Red Zone will *always* trigger an automated payout between ₹100–₹200 to demonstrate the engine.
-
-## 🛠️ System Architecture
-
-### Frontend (React + Vite + TailwindCSS 4)
-- **Deployment:** Vercel (`src/`, `components/`)
-- **Real-Time Data:** WebSockets connected to backend Graph simulation.
-- **Mapping:** Mapbox GL for live worker telemetry.
-
-### Backend (FastAPI + Python 3.12)
-- **Deployment:** Render (Web Service based on `main.py`)
-- **Simulation Engine:** `services/simulation_service.py` runs a ticker to simulate city disruptions.
-- **Graph Neural Network:** Uses `NetworkX` to evaluate alternative routes and measure time loss.
-- **Payout Engine:** `services/unified_payout_engine.py` guarantees automated compensation calculating expected income vs exact disruption severity.
-
-### Database (MongoDB Atlas)
-- Pre-loaded with demo users.
-- Live active session & fraud tracking.
-
-## ⚙️ How It Works (The 3 Zones)
-1. 🟢 **GREEN ZONE:** Normal operations. Optimal route available.
-2. 🟡 **YELLOW ZONE:** Delayed. Alternative routes forced due to traffic/strikes causing inefficiency. (Calculates Time Loss = New Route - Optimal Route).
-3. 🔴 **RED ZONE:** Blocked. Route infeasible due to floods, severe strikes. Instantly triggers full Peak Income Compensation.
-
-## 🌍 Hackathon Deployment Instructions (Manual Steps)
-If Auto-Deploy fails due to Branch Protection rules, follow these steps to go live instantly:
-
-1. **GitHub Merge:** Merge the `deployment-ready` branch into `main` (requires owner approval).
-2. **Frontend Deployment:** Vercel is connected. Wait 60s for the Build (`npm run build`). Add the `VITE_BACKEND_URL=https://snapinsure.onrender.com` Environment Variable.
-3. **Backend Deployment:** Render is connected via the `render.yaml` Blueprint. Or just deploy `backend` folder as Web Service. Ensure `MONGODB_URL` is set to an Atlas Cluster.
+SnapInsure is a high-fidelity fintech platform designed to eliminate income volatility for gig workers (Zomato, Swiggy, Uber, etc.). Unlike traditional insurance, SnapInsure uses **Parametric Triggers**—when a city disruption (rain, traffic, or strike) occurs, workers are compensated **instantly** without ever filing a claim.
 
 ---
-Built for the Guidewire Hackathon.
+
+## ✨ Features that WOW
+- **🚀 Zero-Claim Payouts**: Real-time detection of city-wide disruptions triggers instant payouts to worker wallets.
+- **🧠 AI Zone Advisor**: A live recommendation engine that ranks city zones based on Demand, Risk, and Pool status to help workers earn more.
+- **🌓 Shift-Based Income Guarantee**: Automates "shortfall" compensation if a worker's shift target isn't met due to area blocks.
+- **📡 Live City Graph**: A `NetworkX`-powered backend that simulates city-wide disruptions and calculates time loss for every worker.
+- **🗺️ Interactive Mission Control**: A premium Mapbox-powered dashboard with real-time GPS telemetry and live event feeds.
+
+---
+
+## 🛠️ Technical Stack
+
+- **Backend**: FastAPI (Python 3.10+) — Hosted on **Render**
+- **Frontend**: React 19 + Tailwind CSS + Framer Motion — Hosted on **Vercel**
+- **Real-Time**: WebSockets for sub-second city updates.
+- **Database**: MongoDB Atlas for verified worker stats.
+- **Maps**: Mapbox GL JS for interactive telemetry.
+
+---
+
+## 🚀 One-Click Deployment
+
+### 1. Backend (Render)
+1.  Connect your repo to **Render**.
+2.  Create a new **Web Service**.
+3.  Set the **Root Directory** to `backend`.
+4.  Add these **Environment Variables**:
+    - `MONGO_URI`: Your MongoDB Atlas connection string.
+    - `SECRET_KEY`: A random string for JWT auth.
+5.  Render will auto-deploy using the `runtime.txt` and `requirements.txt`.
+
+### 2. Frontend (Vercel)
+1.  Connect your repo to **Vercel**.
+2.  Set the **Root Directory** to `frontend`.
+3.  Add these **Environment Variables**:
+    - `VITE_BACKEND_URL`: Your Render backend URL (e.g., `https://snapinsure-api.onrender.com`).
+    - `VITE_MAPBOX_TOKEN`: Your Mapbox public access token.
+4.  Vercel will auto-build and deploy your project.
+
+---
+
+## 🏁 Quick Start (Local)
+
+### 1. Backend
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+### 2. Frontend
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🌟 Demo Guide
+Use these pre-loaded accounts to explore the platform:
+
+| Role | Phone Number | Platform | City |Reg_no
+| :--- | :--- | :--- | :--- |
+| **Primary Demo** | `9876543210` | Swiggy | Chennai |SWG123
+| **Testing** | `9876543211` | Zomato | Bangalore |ZOM123
+
+> [!TIP]
+> **To showcase the Payout Engine**: Go to the **City Map** tab in the dashboard and use the **Manual Trigger** buttons (Rain/Traffic). Watch the live notifications and wallet balance update instantly as the "Zero-Claim" engine fires!
+
+---
+
+Built for the **Guidewire Hackathon**.  
+*Ensuring the backbone of our economy stays protected, one tick at a time.*
