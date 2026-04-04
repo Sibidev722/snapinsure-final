@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: snapinsure-backend
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: MONGODB_URL
+        sync: false
+      - key: PORT
+        value: 10000
