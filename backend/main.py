@@ -1,7 +1,7 @@
 import asyncio
 import os
 import time
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from dotenv import load_dotenv
@@ -12,7 +12,25 @@ from models.models import Zone, ZoneState
 from api import users, policies, zones, payouts, triggers, routes, pricing, live_risk, weather, route_risk, nlp_risk, protection, gig_worker, auth
 from api.websocket_router import router as ws_router
 from api.income_os_router import router as income_os_router
+from api.multi_agent_router import router as multi_agent_router
+from api.esg_router import router as esg_router
+from api.gnn_router import router as gnn_router
+from api.routing_router import router as routing_router
+from api.claim_router import router as claim_router
+from api.weather_router import router as weather_api_router
+from api.weather_impact_router import router as weather_impact_router
+from api.pricing_router import router as zone_pricing_api_router
 from core.logger import logger
+from workers.live_simulator_worker import live_simulator
+from workers.weather_poller import weather_poller
+from workers.income_os_worker import income_os_worker
+from workers.gnn_worker import gnn_worker
+from workers.zone_state_worker import zone_state_worker
+from services.news_fetcher_service import news_fetcher_service
+
+from api.zone_state_router import router as zone_state_router
+from api.override_router import router as override_router
+from api.intelligence_router import router as intelligence_router
 
 # Load environment variables (IMPORTANT for deployment)
 load_dotenv()
@@ -41,6 +59,15 @@ app.add_middleware(
 )
 
 # ✅ HEALTH CHECK (VERY IMPORTANT FOR RENDER)
+@app.get("/health", tags=["System Information"])
+async def health_check(db = Depends(get_db)):
+    try:
+        await db.command("ping")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail="Database connection failed")
+
 @app.get("/", tags=["System Information"])
 async def root():
     return {
@@ -113,10 +140,37 @@ async def startup_event():
         await seed_verified_workers(db)
         logger.info("[STARTUP] Workers seeded")
 
-        # Start simulation loop
+        # ── REAL-WORLD ZONE STATE ENGINE (primary driver) ────────────────
+        await zone_state_worker.start()
+        logger.info("[STARTUP] ✅ ZoneStateWorker started — weather/traffic/NLP/demand signals LIVE")
+
+        # Worker GPS movement + earnings/claims loop
         from services.simulation_service import simulation_loop
         asyncio.create_task(simulation_loop())
-        logger.info("[STARTUP] Simulation loop started")
+        logger.info("[STARTUP] ✅ Worker position tracker started")
+
+        # Live DB stream workers (earnings + real-zone-state-driven claims)
+        await live_simulator.start()
+        logger.info("[STARTUP] ✅ Live DB stream worker started")
+
+        # Weather business-impact poller (also feeds ZoneStateEngine)
+        await weather_poller.start()
+        logger.info("[STARTUP] ✅ Weather poller started")
+
+        # Income OS
+        await income_os_worker.start()
+        logger.info("[STARTUP] ✅ Income OS worker started")
+
+        # GNN predictive engine
+        await gnn_worker.start()
+        logger.info("[STARTUP] ✅ GNN worker started")
+
+        # News background fetcher
+        news_fetcher_service.start_worker("Chennai")
+        logger.info("[STARTUP] ✅ News fetcher background worker started")
+
+        logger.info("[STARTUP] 🌍 SnapInsure is LIVE — all zone states driven by real-world APIs")
+
 
     except Exception as e:
         logger.error(f"[ERROR] STARTUP FAILED: {str(e)}")
@@ -124,6 +178,7 @@ async def startup_event():
 # 🔴 SHUTDOWN EVENT
 @app.on_event("shutdown")
 async def shutdown_event():
+    news_fetcher_service.stop_worker()
     await close_mongo_connection()
     logger.info("[SHUTDOWN] Backend shutdown complete")
 
@@ -148,3 +203,36 @@ app.include_router(ws_router, tags=["WebSocket"])
 from api.ai_advisor_router import router as ai_router
 app.include_router(ai_router, tags=["AI Advisor"])
 app.include_router(income_os_router, tags=["Income OS"])
+
+# Multi-Agent Fraud Detection
+app.include_router(multi_agent_router, tags=["Multi-Agent System"])
+
+# Autonomous Claim Evaluation (Master Pipeline)
+app.include_router(claim_router)
+
+# ESG Green Premium Engine
+app.include_router(esg_router)
+
+# GNN Decision Engine
+app.include_router(gnn_router)
+
+# Route Optimizer
+app.include_router(routing_router)
+
+# Live Weather API (Open-Meteo / OWM, 5-min cache)
+app.include_router(weather_api_router, tags=["Live Weather"])
+
+# Weather Impact Engine (demand + surge multipliers)
+app.include_router(weather_impact_router, tags=["Weather Impact Engine"])
+
+# Zone Pricing Engine (Advanced surge pricing based on multi-source intelligence)
+app.include_router(zone_pricing_api_router, tags=["Zone Pricing"])
+
+# Real-World Zone State Engine (primary zone driver)
+app.include_router(zone_state_router, tags=["Zone State Engine"])
+
+# Human-in-the-Loop Override System
+app.include_router(override_router, tags=["Human Override"])
+
+# Zone Intelligence Engine (Risk + GNN + ESG + Agents combined)
+app.include_router(intelligence_router, tags=["Intelligence Engine"])

@@ -2,11 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
-import CityMap from './components/CityMap'
+import MissionControl from './components/MissionControl'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 import WalletView from './components/WalletView'
 import IncomeOS from './components/IncomeOS'
-import { Shield, MapPin, BarChart3, Wallet, User, LogOut, TerminalSquare, Zap, Brain } from 'lucide-react'
+import AIPanel from './components/AIPanel'
+import { useSimulationStore } from './store/useSimulationStore'
+import { Shield, MapPin, BarChart3, Wallet, User, LogOut, TerminalSquare, Zap, Brain, Cpu } from 'lucide-react'
 
 // ── Debug Overlay ────────────────────────────────────────────────────────────
 const DeveloperDebugOverlay = ({ cityState }) => {
@@ -101,14 +103,11 @@ export default function App() {
   const [user, setUser]           = useState(null)
   const [platform, setPlatform]   = useState(null)
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [cityState, setCityState] = useState(null)
-  const [wsConnected, setWsConnected] = useState(false)
-  // Live payout queue — real-time NOTIFICATION messages get pushed here immediately
-  const [livePayouts, setLivePayouts] = useState([])
 
-  const wsRef             = useRef(null)
-  const reconnectTimerRef = useRef(null)
-  const seenNotifIds      = useRef(new Set())
+  // Pull these from global Zustand store—no prop drilling forced refreshes anymore
+  const cityState = useSimulationStore(state => state.cityState)
+  const wsConnected = useSimulationStore(state => state.wsConnected)
+  const livePayouts = useSimulationStore(state => state.liveEventsFeed)
 
   const handleLogin  = (u, p) => { setUser(u); setPlatform(p) }
   const handleLogout = () => {
@@ -116,48 +115,12 @@ export default function App() {
     localStorage.removeItem('snapinsure_token')
   }
 
-  const connectWs = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return
-    const ws = new WebSocket(WS_URL)
-    wsRef.current = ws
-
-    ws.onopen = () => {
-      setWsConnected(true)
-      clearTimeout(reconnectTimerRef.current)
-    }
-    ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data)
-        if (data.type === 'city_update') {
-          setCityState(data)
-        } else if (data.type === 'NOTIFICATION' && data.payload?.type === 'PAYOUT') {
-          // Instant real-time payout event — deduplicate by backend UUID
-          const p = data.payload
-          const pid = p.id || `${p.timestamp}-${p.amount}`
-          if (!seenNotifIds.current.has(pid)) {
-            seenNotifIds.current.add(pid)
-            setLivePayouts(prev => [p, ...prev].slice(0, 20))
-          }
-        }
-      } catch (_) {}
-    }
-    ws.onerror = () => setWsConnected(false)
-    ws.onclose = () => {
-      setWsConnected(false)
-      reconnectTimerRef.current = setTimeout(connectWs, 3000)
-    }
-  }, [])
-
-  useEffect(() => {
-    connectWs()
-    return () => { wsRef.current?.close(); clearTimeout(reconnectTimerRef.current) }
-  }, [connectWs])
-
   if (!user) return <Login onLogin={handleLogin} />
 
   const TABS = [
     { id: 'dashboard', label: 'My Dashboard', icon: <User className="w-4 h-4"/> },
     { id: 'income',    label: 'Income OS',    icon: <Brain className="w-4 h-4"/>, badge: 'AI' },
+    { id: 'ai',        label: 'AI Intelligence', icon: <Cpu className="w-4 h-4"/>, badge: 'NEW' },
     { id: 'map',       label: 'City Map',      icon: <MapPin className="w-4 h-4"/> },
     { id: 'analytics', label: 'Analytics',     icon: <BarChart3 className="w-4 h-4"/> },
     { id: 'wallet',    label: 'Wallet',         icon: <Wallet className="w-4 h-4"/> },
@@ -219,10 +182,34 @@ export default function App() {
           >
             {activeTab === 'dashboard'  && <Dashboard cityState={cityState} user={user} platform={platform} livePayouts={livePayouts} />}
             {activeTab === 'income'     && <IncomeOS cityState={cityState} user={user} />}
-            {activeTab === 'map'        && <CityMap cityState={cityState} user={user} />}
+            {activeTab === 'ai'         && <AIPanel user={user} cityState={cityState} />}
+            {activeTab === 'map'        && <MissionControl cityState={cityState} user={user} onLogout={handleLogout} />}
             {activeTab === 'analytics'  && <AnalyticsDashboard cityState={cityState} user={user} />}
             {activeTab === 'wallet'     && <WalletView cityState={cityState} user={user} />}
           </motion.div>
+        </AnimatePresence>
+
+        {/* Global Loading State */}
+        <AnimatePresence>
+          {(!wsConnected || !cityState) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-surface/80 backdrop-blur-md rounded-2xl"
+            >
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-brand animate-spin" />
+                  <Shield className="w-6 h-6 text-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">Connecting to Simulation Hub</h3>
+                  <p className="text-xs text-slate-400 mt-1 animate-pulse">Establishing secure WebSocket link...</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 

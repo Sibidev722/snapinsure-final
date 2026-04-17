@@ -169,14 +169,12 @@ async def get_zone_status_for_user(worker_id: str) -> Dict[str, Any]:
     import asyncio
 
     # Concurrent fetch – weather + NLP disruptions
-    lat = worker.get("lat")
-    lon = worker.get("lon")
-    weather_task = weather_service.get_weather_risk(city, lat, lon)
+    weather_task = weather_service.get_weather(city)
     nlp_task     = get_nlp_risk(city)
     results      = await asyncio.gather(weather_task, nlp_task, return_exceptions=True)
 
     weather_data = results[0] if not isinstance(results[0], Exception) else {
-        "risk_score": 0.5, "reason": "Weather API unavailable", "zone": "YELLOW"
+        "risk_score": 0.5, "condition": "Weather API unavailable", "zone": "YELLOW"
     }
     nlp_data = results[1] if not isinstance(results[1], Exception) else {
         "risk_score": 0.3, "zone": "GREEN", "articles_scanned": 0
@@ -201,9 +199,9 @@ async def get_zone_status_for_user(worker_id: str) -> Dict[str, Any]:
     # ── Collect human-readable reasons ────────────────────────────────────────
     reasons = []
     if weather_risk > 0.7:
-        reasons.append(weather_data.get("reason", "heavy rain"))
+        reasons.append(weather_data.get("condition", "heavy rain"))
     elif weather_risk > 0.4:
-        reasons.append(weather_data.get("reason", "moderate rain"))
+        reasons.append(weather_data.get("condition", "moderate rain"))
 
     if strike_risk > 0.5:
         reasons.append(nlp_data.get("reason", "strike/disruption reported in city"))

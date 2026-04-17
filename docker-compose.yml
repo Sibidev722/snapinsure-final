@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: snapinsure-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mongodb
+    networks:
+      - snapinsure-network
+
+  mongodb:
+    image: mongo:latest
+    container_name: snapinsure-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - snapinsure-network
+
+networks:
+  snapinsure-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

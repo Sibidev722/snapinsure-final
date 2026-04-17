@@ -1,6 +1,7 @@
 from models.models import PayoutReason, Payout, ZoneState
 from datetime import datetime
 import uuid
+from services.stripe_service import stripe_service
 
 class PayoutEngine:
     HOURLY_INCOME = 20.0
@@ -40,6 +41,9 @@ class PayoutEngine:
             )
             # Insert payout record into database
             await db["payouts"].insert_one(payout.dict(by_alias=True))
+            
+            # Initiate real-world payout via Stripe
+            await stripe_service.create_payout(payout_amount, description=f"Autonomous Payout: {reason}")
 
         return {
             "payout": payout_amount,
@@ -85,6 +89,9 @@ class PayoutEngine:
             # Save payout to DB
             await db["payouts"].insert_one(payout.dict(by_alias=True))
             processed_payouts.append(payout.dict(by_alias=True))
+
+            # Initiate real-world payout via Stripe
+            await stripe_service.create_payout(payout_amount, description=f"Autonomous Payout: {reason} (Zone {zone_id})")
             
             # Optionally mark policy as inactive if fully claimed (RED)
             if state == ZoneState.RED:

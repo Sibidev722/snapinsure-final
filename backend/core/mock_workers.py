@@ -14,6 +14,9 @@ Each worker has:
 - avg_income  : Average daily income in ₹
 - peak_hours  : Peak working hours per day
 - total_protection : Cumulative insurance protection received (₹)
+- vehicle_type     : "petrol" | "ev" | "bicycle"
+- total_carbon_saved: kg of CO2 saved vs petrol baseline
+- esg_discount    : current premium discount (0.00 to 0.10)
 """
 
 MOCK_WORKERS = [
@@ -29,6 +32,9 @@ MOCK_WORKERS = [
         "peak_hours": 6,
         "total_protection": 3200.0,
         "last_payout": 150.0,
+        "vehicle_type": "petrol",
+        "total_carbon_saved": 0.0,
+        "esg_discount": 0.0,
     },
     {
         "worker_id": "ZOM-1002",
@@ -41,6 +47,9 @@ MOCK_WORKERS = [
         "peak_hours": 7,
         "total_protection": 4100.0,
         "last_payout": 280.0,
+        "vehicle_type": "ev",
+        "total_carbon_saved": 8.5,
+        "esg_discount": 0.10,
     },
     {
         "worker_id": "ZOM-1003",
@@ -53,6 +62,9 @@ MOCK_WORKERS = [
         "peak_hours": 5,
         "total_protection": 0.0,
         "last_payout": 0.0,
+        "vehicle_type": "petrol",
+        "total_carbon_saved": 0.0,
+        "esg_discount": 0.0,
     },
     # ─── SWIGGY ────────────────────────────────────────────────────────────────
     {
@@ -66,6 +78,9 @@ MOCK_WORKERS = [
         "peak_hours": 6,
         "total_protection": 2800.0,
         "last_payout": 200.0,
+        "vehicle_type": "bicycle",
+        "total_carbon_saved": 12.4,
+        "esg_discount": 0.10,
     },
     {
         "worker_id": "SWG-2002",
@@ -78,6 +93,9 @@ MOCK_WORKERS = [
         "peak_hours": 5,
         "total_protection": 1900.0,
         "last_payout": 100.0,
+        "vehicle_type": "ev",
+        "total_carbon_saved": 4.2,
+        "esg_discount": 0.0,
     },
     {
         "worker_id": "SWG-2003",
@@ -90,6 +108,9 @@ MOCK_WORKERS = [
         "peak_hours": 7,
         "total_protection": 5300.0,
         "last_payout": 350.0,
+        "vehicle_type": "petrol",
+        "total_carbon_saved": 0.0,
+        "esg_discount": 0.0,
     },
     # ─── UBER ──────────────────────────────────────────────────────────────────
     {
@@ -103,6 +124,9 @@ MOCK_WORKERS = [
         "peak_hours": 8,
         "total_protection": 6800.0,
         "last_payout": 450.0,
+        "vehicle_type": "petrol",
+        "total_carbon_saved": 0.0,
+        "esg_discount": 0.0,
     },
     {
         "worker_id": "UBR-3002",
@@ -115,6 +139,9 @@ MOCK_WORKERS = [
         "peak_hours": 8,
         "total_protection": 5200.0,
         "last_payout": 320.0,
+        "vehicle_type": "ev",
+        "total_carbon_saved": 15.6,
+        "esg_discount": 0.10,
     },
     {
         "worker_id": "UBR-3003",
@@ -127,6 +154,9 @@ MOCK_WORKERS = [
         "peak_hours": 9,
         "total_protection": 7100.0,
         "last_payout": 500.0,
+        "vehicle_type": "petrol",
+        "total_carbon_saved": 0.0,
+        "esg_discount": 0.0,
     },
     # ─── BLINKIT ───────────────────────────────────────────────────────────────
     {
@@ -140,6 +170,9 @@ MOCK_WORKERS = [
         "peak_hours": 5,
         "total_protection": 1500.0,
         "last_payout": 80.0,
+        "vehicle_type": "ev",
+        "total_carbon_saved": 6.8,
+        "esg_discount": 0.10,
     },
     {
         "worker_id": "BLK-4002",
@@ -152,6 +185,9 @@ MOCK_WORKERS = [
         "peak_hours": 6,
         "total_protection": 2300.0,
         "last_payout": 130.0,
+        "vehicle_type": "ev",
+        "total_carbon_saved": 2.1,
+        "esg_discount": 0.0,
     },
     {
         "worker_id": "BLK-4003",
@@ -164,6 +200,9 @@ MOCK_WORKERS = [
         "peak_hours": 5,
         "total_protection": 1800.0,
         "last_payout": 95.0,
+        "vehicle_type": "petrol",
+        "total_carbon_saved": 0.0,
+        "esg_discount": 0.0,
     },
 ]
 

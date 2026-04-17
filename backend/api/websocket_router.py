@@ -58,14 +58,22 @@ async def handle_ui_sync(payload=None):
 
 async def handle_ui_notification(payload: dict):
     """When a specific notification is emitted, broadcast it immediately to all clients."""
-    # Wrap in a type that the frontend can distinguish
     await _broadcast({
         "type": "NOTIFICATION",
         "payload": payload
     })
 
+async def handle_live_event_broadcast(payload: dict):
+    """Directly bypass state builder and push lightweight DB events to frontend."""
+    await _broadcast(payload)
+
 event_bus.subscribe("UI_SYNC", handle_ui_sync)
 event_bus.subscribe("UI_NOTIFICATION", handle_ui_notification)
+event_bus.subscribe("new_earning", handle_live_event_broadcast)
+event_bus.subscribe("disruption_update", handle_live_event_broadcast)
+event_bus.subscribe("new_claim", handle_live_event_broadcast)
+event_bus.subscribe("weather_update", handle_live_event_broadcast)
+event_bus.subscribe("event_update", handle_live_event_broadcast)
 
 
 

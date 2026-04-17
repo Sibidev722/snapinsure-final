@@ -9,6 +9,7 @@ import {
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, Tooltip, XAxis } from 'recharts'
 import Map, { Marker, NavigationControl, Source, Layer } from 'react-map-gl/mapbox'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { useSimulationStore } from '../store/useSimulationStore'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || ''
 const SIM_API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
@@ -108,8 +109,8 @@ function ZoneOrb({ zone, riskScore, isScanning, stats }) {
 }
 
 function TriggerFeed({ events }) {
-  const ICONS  = { WEATHER: <CloudRain className="w-3.5 h-3.5" />, PAYOUT: <Wallet className="w-3.5 h-3.5" />, TRAFFIC: <Car className="w-3.5 h-3.5" />, STRIKE: <Megaphone className="w-3.5 h-3.5" />, SYSTEM: <Activity className="w-3.5 h-3.5" /> }
-  const COLORS = { WEATHER: 'text-blue-400 bg-blue-400/10 border-blue-400/20', PAYOUT: 'text-safe bg-safe/10 border-safe/20', TRAFFIC: 'text-warn bg-warn/10 border-warn/20', STRIKE: 'text-danger bg-danger/10 border-danger/20', SYSTEM: 'text-brand bg-brand/10 border-brand/20' }
+  const ICONS  = { WEATHER: <CloudRain className="w-3.5 h-3.5" />, PAYOUT: <Wallet className="w-3.5 h-3.5" />, TRAFFIC: <Car className="w-3.5 h-3.5" />, STRIKE: <Megaphone className="w-3.5 h-3.5" />, SYSTEM: <Activity className="w-3.5 h-3.5" />, CARBON_REWARD: <Sparkles className="w-3.5 h-3.5" /> }
+  const COLORS = { WEATHER: 'text-blue-400 bg-blue-400/10 border-blue-400/20', PAYOUT: 'text-safe bg-safe/10 border-safe/20', TRAFFIC: 'text-warn bg-warn/10 border-warn/20', STRIKE: 'text-danger bg-danger/10 border-danger/20', SYSTEM: 'text-brand bg-brand/10 border-brand/20', CARBON_REWARD: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' }
   return (
     <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar">
       {events.length === 0 && <p className="text-xs text-slate-600 uppercase tracking-widest animate-pulse py-4 text-center">Monitoring regional signals...</p>}
@@ -139,6 +140,7 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
   const [lastPayout, setLastPayout] = useState(null)
   const [totalProtection, setTotalProtection] = useState(user?.total_protection || 3200)
   const [weeklyPremium]             = useState(Math.round(Math.random() * 30 + 55))
+  const activeClaim                 = useSimulationStore(state => state.activeClaim)
   const [payoutHistory, setPayoutHistory]     = useState([])
   const [triggerEvents, setTriggerEvents]     = useState([])
   const [isScanning, setIsScanning]           = useState(false)
@@ -150,6 +152,12 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
   const [showNotif, setShowNotif]             = useState(false)
   const [aiAdvice, setAiAdvice]               = useState(null)
   const [aiLoading, setAiLoading]             = useState(false)
+  const [showDemoPanel, setShowDemoPanel]     = useState(false)
+  const [esgStats, setEsgStats]               = useState({
+    total_carbon_saved: user?.total_carbon_saved || 0,
+    discount: user?.esg_discount || 0,
+    badge: user?.esg_badge || 'Bronze'
+  })
   const [viewport, setViewport]               = useState({ latitude: 13.0827, longitude: 80.2707, zoom: 11 })
   const scanIntervalRef = useRef(null)
   const prevZoneRef     = useRef('GREEN')
@@ -273,6 +281,18 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
     setPayoutHistory(prev => [p, ...prev].slice(0, 10))
     setShowNotif(true)
     setTimeout(() => setShowNotif(false), 6000)
+
+    // Sync ESG stats if it was an ESG update
+    if (latest.type === 'SYSTEM' && latest.msg.includes('ESG:')) {
+      const myWorker = cityState?.workers?.find(w => w.id === userId)
+      if (myWorker) {
+        setEsgStats({
+          total_carbon_saved: myWorker.total_carbon_saved || 0,
+          discount: myWorker.esg_discount || 0,
+          badge: myWorker.esg_badge || 'Bronze'
+        })
+      }
+    }
   }, [livePayouts])
 
   // ── Background scanning ping ─────────────────────────────
@@ -424,6 +444,63 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
         )}
       </AnimatePresence>
 
+      {/* ── Active Claim Processing Header Bar ────────────────── */}
+      <AnimatePresence>
+        {activeClaim && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -20, height: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <div className="glass rounded-2xl p-4 border border-brand/40 shadow-glow-brand relative overflow-hidden bg-brand/5">
+              <div className="absolute inset-0 bg-[url('/mesh.svg')] opacity-10" />
+              <div className="relative z-10 flex flex-col md:flex-row items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-brand/20 flex flex-shrink-0 items-center justify-center border border-brand/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                  {activeClaim.status === 'processing' ? (
+                    <Activity className="w-6 h-6 text-brandlt animate-pulse" />
+                  ) : activeClaim.status === 'approved' || activeClaim.status === 'paid' ? (
+                    <CheckCircle className="w-6 h-6 text-safe" />
+                  ) : (
+                    <Clock className="w-6 h-6 text-warn" />
+                  )}
+                </div>
+                <div className="flex-1 w-full text-center md:text-left">
+                  <p className="text-[10px] uppercase font-black tracking-widest text-brand mb-0.5 animate-pulse">
+                    Automated Claim Engine Active
+                  </p>
+                  <p className="text-sm text-slate-200">
+                    Claim <span className="font-mono text-white">{activeClaim.claim_id || 'ID-XXX'}</span> for <span className="font-bold">{activeClaim.worker_name || 'Worker'}</span> is currently <span className="uppercase font-bold text-white tracking-wide">{activeClaim.status}</span>
+                  </p>
+                </div>
+                <div className="w-full md:w-64">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
+                    <span>Progress</span>
+                    <span className="text-white">
+                      {activeClaim.status === 'filed' ? '25%' : activeClaim.status === 'processing' ? '65%' : '100%'}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      className={`h-full rounded-full ${
+                        activeClaim.status === 'approved' || activeClaim.status === 'paid'
+                          ? 'bg-safe'
+                          : 'bg-brand shadow-[0_0_8px_rgba(59,130,246,0.5)]'
+                      }`}
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: activeClaim.status === 'filed' ? '25%' : activeClaim.status === 'processing' ? '65%' : '100%'
+                      }}
+                      transition={{ duration: 1.5, ease: 'easeInOut' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Worker Identity Bar ──────────────────────────────── */}
       <motion.div className="glass rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 relative overflow-hidden"
         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
@@ -455,9 +532,17 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
             </div>
           </div>
         </div>
-        <div className="text-right flex-shrink-0">
+        <div className="text-right flex-shrink-0 flex flex-col items-end">
           <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Current Zone</p>
-          <p className={`text-2xl font-black ${zConf.textColor}`}>{zone}</p>
+          <div className="flex items-center gap-3">
+             {currentZoneData?.surge > 1.0 && (
+               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-warn/10 border border-warn/20 text-warn animate-pulse">
+                  <TrendingUp className="w-3 h-3" />
+                  <span className="text-[10px] font-black">{currentZoneData.surge}x SURGE</span>
+               </div>
+             )}
+             <p className={`text-2xl font-black ${zConf.textColor}`}>{zone}</p>
+          </div>
         </div>
       </motion.div>
 
@@ -580,11 +665,31 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
           {lastPayout && (
             <>
               <p className="text-xs text-safe/80 mt-0.5 font-semibold">{lastPayout.reason}</p>
-              {lastPayout.calculation && <p className="text-[10px] text-slate-500 font-mono leading-tight">{lastPayout.calculation}</p>}
               <p className="text-[10px] text-slate-600 mt-1">{lastPayout.time}</p>
             </>
           )}
-          {!lastPayout && <p className="text-xs text-slate-500 mt-0.5">Trigger a simulation to generate payouts</p>}
+          {!lastPayout && <p className="text-xs text-slate-500 mt-0.5">Automated Risk Engine Live</p>}
+        </motion.div>
+
+        {/* Card 5 — Environmental Impact (ESG) */}
+        <motion.div className="col-span-2 lg:col-span-1 glass glass-hover rounded-2xl p-5 flex flex-col gap-1 relative overflow-hidden shadow-card"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.5 }}>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl flex-shrink-0 pointer-events-none" />
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-glow-safe">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <span className={`tag ${esgStats.badge === 'Green Elite' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-glow-safe' : 'bg-white/5 text-slate-400 border-white/10'}`}>
+               {esgStats.badge}
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest relative z-10">Green Savings</p>
+          <p className="text-3xl font-black text-emerald-400 relative z-10">{esgStats.total_carbon_saved} <span className="text-xs text-slate-500">kg/CO₂</span></p>
+          <div className="flex items-center gap-2 mt-2 relative z-10">
+             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-0.5">
+                <p className="text-[9px] font-black text-emerald-400">{Math.round(esgStats.discount * 100)}% PREM. DISCOUNT</p>
+             </div>
+          </div>
         </motion.div>
       </div>
 
@@ -830,38 +935,53 @@ export default function Dashboard({ user, platform, onLogout, cityState, wsConne
         </AnimatePresence>
       </motion.div>
 
-      {/* ── Simulation Panel ─────────────────────────────── */}
-      <motion.div className="glass rounded-2xl p-5 mb-6 shadow-card"
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.5 }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-white">Demo Simulation Panel</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Trigger real-time disruption scenarios — WebSocket broadcast</p>
-          </div>
-          <div className="tag bg-brand/10 text-brandlt border border-brand/20"><Info className="w-3 h-3" />Live Demo</div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {SIM_SCENARIOS.map(s => (
-            <motion.button key={s.id} onClick={() => runSimulation(s)} disabled={!!simLoading}
-              className={`relative flex items-center gap-3 p-4 rounded-xl border transition-all duration-200 text-left overflow-hidden ${
-                simLoading === s.id ? 'border-brand/40 bg-brand/10' : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-              } disabled:opacity-60`}
-              whileTap={{ scale: 0.97 }}>
-              {simLoading === s.id && <div className="absolute inset-0 overflow-hidden"><div className="shimmer-bg absolute inset-0 opacity-30" /></div>}
-              <span className="text-2xl relative z-10">{s.icon}</span>
-              <div className="relative z-10">
-                <p className="text-sm font-semibold text-white">{s.label}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">→ {s.zone} zone • ₹{s.payout} payout</p>
+      {/* ── Simulation/Diagnostics Panel (Hidden by default) ── */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowDemoPanel(!showDemoPanel)}
+          className="flex items-center gap-2 text-[10px] font-bold text-slate-600 hover:text-slate-400 uppercase tracking-widest transition-all mb-2"
+        >
+          {showDemoPanel ? <XCircle className="w-3 h-3" /> : <RefreshCw className="w-3 h-3" />}
+          {showDemoPanel ? 'Hide' : 'Show'} System Diagnostics
+        </button>
+
+        <AnimatePresence>
+          {showDemoPanel && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="glass rounded-2xl p-5 border border-white/5 shadow-card">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-white">System Override & Diagnostics</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Emergency manual triggers — bypasses real-world signal engine</p>
+                  </div>
+                  <div className="tag bg-brand/10 text-brandlt border border-brand/20"><Info className="w-3 h-3" />Demo Fallback</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {SIM_SCENARIOS.map(s => (
+                    <motion.button key={s.id} onClick={() => runSimulation(s)} disabled={!!simLoading}
+                      className={`relative flex items-center gap-3 p-4 rounded-xl border transition-all duration-200 text-left overflow-hidden ${
+                        simLoading === s.id ? 'border-brand/40 bg-brand/10' : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                      } disabled:opacity-60`}
+                      whileTap={{ scale: 0.97 }}>
+                      {simLoading === s.id && <div className="absolute inset-0 overflow-hidden"><div className="shimmer-bg absolute inset-0 opacity-30" /></div>}
+                      <span className="text-2xl relative z-10">{s.icon}</span>
+                      <div className="relative z-10">
+                        <p className="text-sm font-semibold text-white">{s.label}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">→ {s.zone} zone • ₹{s.payout} payout</p>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-              {simLoading === s.id && (
-                <motion.div className="ml-auto relative z-10" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                  <RefreshCw className="w-4 h-4 text-brand" />
-                </motion.div>
-              )}
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── Protection Tracking ──────────────────────────── */}
       <motion.div className="glass rounded-2xl p-5 shadow-card"

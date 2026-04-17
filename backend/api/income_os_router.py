@@ -20,6 +20,7 @@ from typing import Optional
 
 from services.income_os_service import income_os
 from services.simulation_service import _worker_positions
+from core.database import get_db
 from core.logger import logger
 
 router = APIRouter(prefix="/income-os", tags=["Income OS"])
@@ -93,6 +94,29 @@ async def get_ai_suggestion(
     resolved = _resolve_zone(worker_id, zone_id)
     result   = income_os.suggestion(worker_id, resolved)
     return result
+
+
+@router.get("/decisions/{worker_id}")
+async def get_latest_decision(worker_id: str):
+    """
+    High-Fidelity Decision Engine — returns the latest autonomous MOVE/STAY decision.
+    Stored in DB every 5 seconds by the IncomeOSWorker.
+    Logic: score = demand + surge - risk
+    """
+    db = get_db()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database offline")
+        
+    decision = await db.income_os_decisions.find_one({"worker_id": worker_id})
+    if not decision:
+        raise HTTPException(status_code=404, detail="No recent decision found for this worker")
+    
+    # Clean up MongoDB _id before returning
+    if "_id" in decision:
+        del decision["_id"]
+        
+    return decision
+
 
 
 @router.get("/zones/ranked")

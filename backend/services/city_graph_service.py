@@ -235,6 +235,33 @@ class CityGraph:
         for src, dst in self.G.edges():
             self.G[src][dst]["blocked"] = False
 
+    # ── Real-world engine update (ZoneStateEngine only) ───────────────────────
+
+    def update_zone_from_engine(self, zone_id: str, state: str,
+                                 risk_score: float, reason: str,
+                                 signals: dict = None) -> None:
+        """
+        Set a zone's state from real-world signal data.
+        Called ONLY by zone_state_engine — never by simulation code.
+        Preserves all existing zone metadata (lat/lon, orders, pool, etc.)
+        """
+        z = self._zones.get(zone_id)
+        if z is None:
+            return
+
+        z["state"]      = state
+        z["risk_score"] = round(min(1.0, max(0.0, risk_score)), 3)
+        z["blocked"]    = (state == "RED")
+        z["delay_factor"] = {
+            "RED": round(3.0 + risk_score, 1),
+            "YELLOW": round(1.5 + risk_score * 0.5, 1),
+            "GREEN": 1.0,
+        }.get(state, 1.0)
+        z["collapse_reason"] = reason if state == "RED" else None
+        z["real_signals"] = signals or {}   # store signal breakdown for frontend
+
+        self.G.nodes[zone_id].update(z)
+
     # ── Route intelligence ───────────────────────────────────────────────────
 
     def get_route_status(self, source: str, target: str) -> Dict:

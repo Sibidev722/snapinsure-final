@@ -1,31 +1,24 @@
 from fastapi import APIRouter, HTTPException, Query
 from services.weather_service import weather_service
-import requests
 
 router = APIRouter()
 
-@router.get("/weather-risk")
-async def get_weather_risk(city: str = Query(..., description="City name to fetch live weather risk for")):
+@router.get("/weather-risk", summary="Legacy Weather Risk Endpoint")
+async def get_weather_risk(city: str = Query(default="Chennai", description="City name to fetch live weather risk for")):
     """
-    Fetches real-time rainfall and weather condition from OpenWeatherMap.
-    
-    Logic:
-    - rain > 10mm → RED  (heavy rain detected)
-    - rain 3–10mm → YELLOW  (moderate rain detected)
-    - else      → GREEN
+    Legacy endpoint — returns rainfall zone risk (GREEN / YELLOW / RED).
+    For the full weather payload use GET /weather?city=Chennai instead.
     """
     try:
-        result = weather_service.get_weather_risk(city)
+        result = await weather_service.get_weather(city)
         return {
             "city": city,
-            "rainfall": result.get("rainfall", 0),
-            "zone": result.get("zone", result.get("status", "YELLOW")),
-            "reason": result.get("reason", "Unknown")
+            "rainfall": result.get("rainfall_mm", 0),
+            "rain": result.get("rain", False),
+            "intensity": result.get("intensity", "none"),
+            "zone": result.get("zone", "YELLOW"),
+            "reason": result.get("condition", "Unknown"),
+            "risk_score": result.get("risk_score", 0.5),
         }
-    except requests.exceptions.HTTPError as e:
-        status = e.response.status_code if e.response is not None else 500
-        if status == 404:
-            raise HTTPException(status_code=404, detail=f"City '{city}' not found in OpenWeatherMap. Check spelling.")
-        raise HTTPException(status_code=502, detail=f"OpenWeatherMap API error: HTTP {status}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error fetching weather: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Weather service error: {str(e)}")

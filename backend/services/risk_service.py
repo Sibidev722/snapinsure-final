@@ -19,7 +19,7 @@ class RiskEngine:
         import logging
         
         # 1. Concurrently poll all autonomous external AI sources
-        weather_data = weather_service.get_weather_risk(city)
+        weather_data = await weather_service.get_weather_risk(city)
         traffic_data = traffic_service.get_traffic_delay(transit_origin, transit_dest)
         nlp_data = nlp_service.analyze_city_disruptions(city)
         
@@ -60,7 +60,7 @@ class RiskEngine:
 
         # 1. Call all APIs concurrently for performance
         tasks = [
-            weather_service.get_weather_risk(city),
+            weather_service.get_weather(city),
             traffic_service.get_traffic_delay(f"{city} City Center", f"{city} Airport"),
             get_nlp_risk(city)
         ]

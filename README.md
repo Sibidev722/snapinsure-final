@@ -69,10 +69,17 @@ npm run dev
 ## 🌟 Demo Guide
 Use these pre-loaded accounts to explore the platform:
 
+<<<<<<< HEAD
 | Role | Phone Number | Platform | City |Reg_no
 | :--- | :--- | :--- | :--- |
 | **Primary Demo** | `9876543210` | Swiggy | Chennai |SWG123
 | **Testing** | `9876543211` | Zomato | Bangalore |ZOM123
+=======
+| Role | Phone Number | Platform | City |
+| :--- | :--- | :--- | :--- |
+| **Primary Demo** | `9876543210` | Swiggy | Chennai |
+| **Testing** | `9876543211` | Zomato | Bangalore |
+>>>>>>> e66175c (Final system integration: GNN, ESG, agents, UI fixes, parametric engine)
 
 > [!TIP]
 > **To showcase the Payout Engine**: Go to the **City Map** tab in the dashboard and use the **Manual Trigger** buttons (Rain/Traffic). Watch the live notifications and wallet balance update instantly as the "Zero-Claim" engine fires!

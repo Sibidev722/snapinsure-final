@@ -157,55 +157,25 @@ def _simulate_earnings():
 
 
 def _maybe_auto_event() -> List[Dict]:
-    global _last_auto_event
-    import time
-    now = time.time()
-    events = []
-
-    if now - _last_auto_event < AUTO_EVENT_INTERVAL:
-        return events
-
-    _last_auto_event = now
-    roll = random.random()
-
-    if roll < 0.20:
-        intensity = random.uniform(0.45, 0.65)
-        city_graph.apply_rain(intensity)
-        events.append({"type": "WEATHER", "msg": f"Rain alert: intensity {intensity:.0%} across city zones"})
-        _analytics["active_disruptions"] += 1
-    elif roll < 0.35:
-        mins = random.randint(15, 40)
-        city_graph.apply_traffic(mins)
-        events.append({"type": "TRAFFIC", "msg": f"Traffic congestion detected — {mins} min delay estimated"})
-    elif roll < 0.42:
-        city_graph.clear_disruption()
-        events.append({"type": "SYSTEM", "msg": "All-clear: disruption cleared. Zones normalising."})
-        _analytics["active_disruptions"] = max(0, _analytics["active_disruptions"] - 1)
-
-    # Track in history
-    for e in events:
-        e["timestamp"] = datetime.utcnow().isoformat()
-        _recent_events.insert(0, e)
-        if len(_recent_events) > 50:
-            _recent_events.pop()
-
-    return events
+    """Simulation auto-events REMOVED — zones are now driven by real-world APIs.
+    Kept as stub so existing callsites don't break during migration."""
+    return []
 
 
 async def simulation_loop():
-    logger.info("[CLOCK] Ticker Loop Started.")
+    logger.info("[CLOCK] Ticker Loop Started — zone states driven by real-world APIs.")
     _init_worker_positions()
 
     while True:
         try:
+            # Tick city graph only for pool_balance and demand fluctuation tracking
+            # Zone STATE is set exclusively by zone_state_engine (real API data)
             city_graph.tick()
             await _move_workers()
             _simulate_earnings()
-            
-            auto_events = _maybe_auto_event()
-            
-            # Orchestrator handles Payouts asynchronously inside WORKER_ACTIVITY.
-            # We just emit UI_SYNC to update websockets
+
+            # No random auto-events — real signals drive everything
+            # Emit UI_SYNC so WebSocket clients get worker position updates
             await event_bus.emit("UI_SYNC")
 
         except Exception as e:
